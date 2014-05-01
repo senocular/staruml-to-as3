@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="EUC-KR" ?>
+<DIRECTMDAGENERATIONUNIT version="1.0">
+  <GROUP>StarUML</GROUP>
+  <CATEGORY>Template</CATEGORY>
+  <NAME>ActionSctipt 3.0</NAME>
+  <DESCRIPTION>ActionSctipt 3.0 Generator for exporting class hierarchies to ActionSctipt 3.0 class files.</DESCRIPTION>
+  <DOCUMENTTYPE>CODE</DOCUMENTTYPE>
+  <FORMAT>TXT</FORMAT>
+  <DATE>9/5/2008</DATE>
+  <VERSION>1.0beta</VERSION>
+  <APPROACH>Default</APPROACH>
+  <TRANSLATORTYPE>TEXT</TRANSLATORTYPE>
+  <TRANSLATORNAME></TRANSLATORNAME>
+  <SAMPLE>http://www.senocular.com</SAMPLE>
+  <TUTORIAL></TUTORIAL>
+  <VALIDATOR></VALIDATOR>
+  <PARAMETERS>
+    <PARAMETER>
+      <NAME>Multiple Source Files</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Indent Style</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE>tab</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Space Indent Size</NAME>
+      <TYPE>INTEGER</TYPE>
+      <VALUE>4</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Indent After Package Block</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Use ANSI Indentation</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>false</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Include Block End Comments</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-name Unnamed Associations</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Public Attributes as Getter/Setters</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>false</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-generated Getter/Setter Prefix</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-generated Getter/Setter Suffix</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE></VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Ignore Definitions Named with Package</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Import Types Named with Package</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-generate Constructors</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Include Empty Supers</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>false</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Set Attributes in Constructors</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Set Attributes Prefix</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE>this.</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Set Attributes Suffix</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE></VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-instantiate Compositions</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Auto-generate Methods from Interfaces</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Signals Extend Event</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Include Event clone</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Include Event toString</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Raisers Extend EventDispatcher</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Raisers Include dispatchEvent</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Include Event Metadata</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Event Metadata Style</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE>flash</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Exceptions Extend Error</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>Raisers Include throw</NAME>
+      <TYPE>BOOLEAN</TYPE>
+      <VALUE>true</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>TemplateFile</NAME>
+      <TYPE>FILENAME</TYPE>
+      <VALUE>$PATH$\template.cot</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>target</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE>$TARGET$</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>OutputFile</NAME>
+      <TYPE>STRING</TYPE>
+      <VALUE>$TARGET$\output.log</VALUE>
+    </PARAMETER>
+    <PARAMETER>
+      <NAME>intermediate</NAME>
+      <TYPE>FILENAME</TYPE>
+      <VALUE>$TARGET$\output.generator.js</VALUE>
+    </PARAMETER>
+  </PARAMETERS>
+</DIRECTMDAGENERATIONUNIT>

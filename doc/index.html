@@ -1,0 +1,670 @@
+<html>
+<head>
+<meta charset="utf-8">
+</head>
+<body>
+<h2>Using StarUML to Generate ActionScript 3.0</h2>
+<p><a href="http://www.staruml.com">StarUML</a> is a free,
+	Windows-based <a href="http://en.wikipedia.org/wiki/Unified_Modeling_Language">UML</a> tool
+	used for creating diagrams related to application design.
+	There are many different kinds of diagrams that UML support, but our focus
+	here will be on <a href="http://en.wikipedia.org/wiki/Class_diagram">Class Diagrams</a>.
+	Class diagrams represent the structure of a collection of classes by showing
+	both how they're defined (inheritance hierarchy) and how they relate to one
+	another (associations).</p>
+<p>By creating a class diagram before you even begin writing a single line of
+	code, you can place focus on one of the more important aspects of an application,
+	it's interface and design. Once you have that defined, implementation becomes
+	a lot simpler and smoother to incorporate. Additionally, UML can be used
+	to create class skeleton files for you. Most UML tools, including StarUML,
+	support an export to a programming language's source code.</p>
+<p>StarUML can export to a number of different programming languages out of the
+	box but does not support ActionScript natively. Instead, a custom export
+	script is required to supply that functionality. This tutorial will cover
+	the use of StarUML to export UML class diagrams to ActionScript 3.0
+source code using a custom export script.<br />
+</p>
+<h3 id="usingtheactionscript30export">Using the ActionScript 3.0 Export</h3>
+<h4 id="installation">Installation</h4>
+<p>Export the <kbd>ActionScript 3.0</kbd> folder into:</p>
+<p><kbd>&lt;StarUML  install&gt;\modules\staruml-generator\templates</kbd></p>
+<p>which with a standard Windows installation would be:</p>
+<p><kbd>C:\Program Files\StarUML\modules\staruml-generator\templates</kbd></p>
+<p>The ActionScript 3.0 folder contains two files: <kbd>template description.tdf</kbd>,
+	a description file providing basic information specific to the export, and
+	<kbd>template.cot</kbd>, the template script used to generate the source code.
+	This should result in the following file locations:</p>
+<p><kbd>C:\Program Files\StarUML\modules\staruml-generator\templates\ActionScript
+	3.0\template description.tdf</kbd><br />
+	<kbd>C:\Program Files\StarUML\modules\staruml-generator\templates\ActionScript
+3.0\template.cot</kbd></p>
+<p> With these files in place, StarUML will be able to recognize the ActionScript
+	3.0 export as a valid export option; no restart is required.</p>
+<h4 id="use">Use</h4>
+<p>Once you've installed the necessary template files, you access
+	the export your UML to ActionScript 3.0 through the StarUML Generator dialog.
+	To open this dialog, use:
+	<kbd>Tools &gt; StarUML Generator&#8230;</kbd>. </p>
+<p><img src="images/staruml_generator.jpg" width="501" height="360" /></p>
+<p>This dialog reads the available
+	.tdf files in the templates directory and displays them in a list. The ActionScript
+	3.0 template should be listed with a Document Name of &quot;ActionScript 3.0&quot;.
+	Check that template and hit Next.</p>
+<p><img src="images/select_path.jpg" width="501" height="360" /></p>
+<p>Select the directory you want to export the ActionScript, then hit Next.</p>
+<p><img src="images/generating.jpg" width="501" height="360" /></p>
+<p>The results screen will open. Click Generate to begin the export and hit Finish
+	when the export is complete.</p>
+<h3 id="umltoactionscripttranslations">UML to ActionScript Translations</h3>
+<p>The following outlines how UML objects and relationships in StarUML translates
+	to ActionScript when exported from StarUML using the ActionScript 3.0 export
+	template. The behavior of many of these translations can be controlled through
+	preferences.</p>
+<ul id="uml-translations">
+	<tr>
+		<li style="list-style-image:url(images/icons/icon_1.png);"><strong>Subsystem</strong><br />
+		<em>Same as Package</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_2.png);"><strong>Package</strong><br />
+			Packages represent folders within a package hierarchy.  When classes are
+			defined in package or a hierarchy of packages, they will be exported
+			within that package in a folder hierarchy that matches the package
+		hierarchy.</li>
+		<li style="list-style-image:url(images/icons/icon_3.png);"><strong>Class</strong><br />
+			UML classes are exported as ActionScript class files. The classes are named
+			based on the name provided for the UML class. Class attributes in
+			classes relate directly to ActionScript class member variables. Operations
+			relate directly to ActionScript class methods. If an operation
+			is defined with the same name as the class itself, that operation
+			represents the class's constructor.
+		<table><tr><td width="140" valign="top"><img src="images/UMLClass.png" width="125" height="68" /></td><td>
+<pre>package {
+
+	public class Class {
+
+		public var property:Type;
+
+
+		public function Class() {
+		}
+
+		public function method():ReturnType {
+			return null;
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_4.png);"><strong>Interface</strong><br />
+			UML interfaces are exported as ActionScript interface files. The interfaces
+			are named based on the name provided for the UML interface.
+		<table><tr><td width="140" valign="top"><img src="images/UMLInterface.png" width="125" height="85" /></td><td>
+<pre>package {
+
+	public interface IInterface {
+
+		function method():ReturnType;
+
+	} // end interface
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_5.png);"><strong>Enumeration</strong><br />
+		<em>Same as Class</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_6.png);"><strong>Signal</strong><br />
+			Much like a class but with additional characteristics and preferences that
+			relate specifically to Event classes. A default export of a Signal
+			will include additional source code specific to events.
+		<table><tr><td width="140" valign="top"><img src="images/UMLSignal.png" width="88" height="55" /></td><td>
+<pre>package {
+
+	import flash.events.Event;
+
+	public class Event extends Event {
+
+		public function Event(type:String, bubbles:Boolean = false,
+				cancelable:Boolean = false) {
+			super(type, bubbles, cancelable);
+		}
+
+		public override function clone():Event {
+			return new Event(type, bubbles, cancelable);
+		}
+
+		public override function toString():String {
+			return formatToString("Event", "type", "bubbles",
+				"cancelable", "eventPhase");
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_7.png);"><strong>Exception</strong><br />
+			Much like a class but with additional characteristics and preferences that
+			relate specifically to Error classes.
+		<table><tr><td width="140" valign="top"><img src="images/UMLException.png" width="88" height="55" /></td><td>
+<pre>package {
+
+	public class Error extends Error {
+
+		public function Error(message:String = "", id:int = 0) {
+			super(message, id);
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_8.png);"><strong>Port</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_9.png);"><strong>Part</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_10.png);"><strong>Association</strong><br />
+			Associations correspond to class attributes that are of a type also
+				defined in the UML. These attributes are not listed in the class's attribute
+			list but are instead identified through an association connector.
+			If the connector is navigable in only one direction, only the originating
+			class will have an attribute defined based on the association, otherwise
+			both classes do. Attributes are named after the name provided on
+			the end of the association. If no name is provided, a default name
+			will be given based off of the name of the associated class. If the
+			end's multiplicity is greater than 1, the type of the attribute generated
+			will automatically become Array.
+				<table><tr><td width="140" valign="top"><img src="images/UMLAssociation.png" width="100" height="154" /></td><td>
+<pre>package {
+
+	public class Class1 {
+
+		public var myClass2s:Array = [];
+
+
+		public function Class1() {
+		}
+
+	} // end class
+} // end package</pre>
+<pre>package {
+
+	public class Class2 {
+
+		public var myClass1:Class1;
+
+
+		public function Class2() {
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_11.png);">&nbsp;Directed <strong>Association</strong><br />
+		<em>Same as Association</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_12.png);"><strong>Aggregation</strong><br />
+		<em>Same as Association</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_13.png);"><strong>Composition</strong><br />
+			Much like associations but classes with composed instances can have instances
+			of their composed classes created automatically.
+		<table>
+			<tr><td width="140" valign="top"><img src="images/UMLComposition.png" width="115" height="154" /></td>
+			<td>
+<pre>package {
+
+	public class Owner {
+
+		public var myComposite:CompositedClass = new CompositedClass();
+
+
+		public function Owner() {
+		}
+
+	} // end class
+} // end package</pre>
+<pre>package {
+
+	public class CompositedClass {
+
+		public var owner:Owner;
+
+
+		public function CompositedClass() {
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_14.png);"><strong>Generalization</strong><br />
+			Indicates inheritance. When one class generalizes another class, that
+			class will extend the class to which the generalization is directed.
+		<table><tr><td width="140" valign="top"><img src="images/UMLGeneralization.png" width="85" height="130" /></td><td>
+<pre>package {
+
+	public class Superclass {
+
+		public function Superclass() {
+		}
+
+	} // end class
+} // end package</pre>
+<pre>package {
+
+	public class Subclass extends Superclass {
+
+		public function Subclass() {
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_15.png);"><strong>Dependency</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_16.png);"><strong>Realization</strong><br />
+			Indicates an interface implementation. When one class realizes an interface,
+			that class will implement the interface to which the realization
+			is directed.
+		<table><tr><td width="140" valign="top"><img src="images/UMLRealization.png" width="129" height="193" /></td><td>
+<pre>package {
+
+	public interface IInterface {
+
+		function method():ReturnType;
+
+	} // end interface
+} // end package</pre>
+<pre>package {
+
+	public class Class implements IInterface {
+
+		public var property:Type;
+
+
+		public function Class() {
+		}
+
+		public function method():ReturnType {
+			return null;
+		}
+
+	} // end class
+} // end package</pre></td></tr></table></li>
+		<li style="list-style-image:url(images/icons/icon_17.png);"><strong>Association Class</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_18.png);"><strong>Connector</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_19.png);"><strong>Object</strong><br />
+		<em>No action</em>.</li>
+		<li style="list-style-image:url(images/icons/icon_20.png);"><strong>Link</strong><br />
+		<em>No action</em>.</li>
+</ul>
+<h3 id="preferences">Preferences</h3>
+<p>The ActionScript 3.0 export template includes a number of user-definable preferences
+that help determine what is exported and how. You can access these preferences
+	in the StarUML Generator dialog.</p>
+<p><img src="images/template_properties.jpg" width="501" height="360" /></p>
+<p>The preferences specific to the ActionScript 3.0 export template include:</p>
+<dl>
+	<dt>Multiple Source Files</dt>
+	<dd><strong>checked</strong>: [Default] Creates a separate file for each source file. The directory
+structure will be based on the package location of each definition. If a folder
+matching the package path does not exist, one is created.<br />
+<strong>unchecked</strong>: Places all source code in the default output file. The name of this
+file will be output.log unless changed within the Template Properties dialog
+in StarUML.</dd>
+</dl>
+<dl>
+	<dt>Indent Style</dt>
+	<dd><strong>tab</strong>: [Default] Indents using the tab character.<br />
+	<strong>space</strong>: Indents using space characters. The number of spaces
+	used is determined by <dfn>Space Indent Size</dfn>.</dd>
+</dl>
+<dl>
+	<dt>Space Indent Size</dt>
+	<dd><strong>[Any Number]</strong>: [Default = 4] When <dfn>Indent Style</dfn> is
+		set to &quot;space&quot;,
+	this number determines the number of spaces to use for indention.</dd>
+</dl>
+<dl>
+	<dt>Indent After Package Block</dt>
+	<dd><strong>checked</strong>: [Default] Indents the definition block following
+	the package block.<br />
+	<strong>unchecked</strong>: Does not indent the definition block. Some styles
+	prefer not indenting this block.</dd>
+</dl>
+<dl>
+	<dt>Use ANSI Indentation</dt>
+	<dd><strong>checked</strong>: Uses ANSI-style indention which places opening brackets ({) on a new
+	line starting at the same column as the previous.<br />
+	<strong>unchecked</strong>: [Default] Uses Kernel Normal Form indention style
+	where opening brackets ({) are placed at the end of a line.</dd>
+</dl>
+<dl>
+	<dt>Auto-name Unnamed Associations</dt>
+	<dd><strong>checked</strong>: [Default] Automatically create and name properties for associations
+	without names. Names will simply become their types with a lowercase first letter.
+	For example, if an unnamed association references a Loader class, the name of
+	the member variable in the class on the other end of the association will be &quot;loader&quot;.<br />
+	<strong>unchecked</strong>: Unnamed associations will be ignored and no variable
+	will be created.</dd>
+</dl>
+<dl>
+	<dt>Public Attributes as Getter/Setters</dt>
+	<dd><strong>checked</strong>: [Default] Converts public attributes into a getter/setter
+		pair of that name which return and set a private version of that variable.
+		The name of the private variable is based off of the <dfn>Auto-generated Getter/Setter
+		Prefix</dfn> and <dfn>Auto-generated Getter/Setter Suffix</dfn> preferences.
+		It is often considered good programming practice to avoid public member
+		variables.<br />
+	<strong>unchecked</strong>: Public attributes are defined as public member variables.</dd>
+</dl>
+<dl>
+	<dt>Auto-generated Getter/Setter Prefix</dt>
+	<dd><strong>[Any String]</strong>: [Default = &quot;_&quot;] Determines a prefix
+		for a generated, private member variable that is being used with getter/setter
+		functions defined when <dfn>Public Attributes as Getter/Setters</dfn> is checked.</dd>
+</dl>
+<dl>
+	<dt>Auto-generated Getter/Setter Suffix</dt>
+	<dd><strong>[Any String]</strong>: [Default = &quot;&quot;] Determines a suffix
+		for a generated, private member variable that is being used with getter/setter
+		functions defined when <dfn>Public Attributes as Getter/Setters</dfn> is checked.</dd>
+</dl>
+<dl>
+	<dt>Ignore Definitions Named with Package</dt>
+	<dd><strong>checked</strong>: [Default] If a class or other definition is given
+		a name with a package path or otherwise contains a period (.), it will
+		not be included in the source export. This allows you to specify native
+		classes in UML (i.e. flash.display.MovieClip) and not have those classes
+		exported with your custom classes. Note: for top level classes like Object
+		or Array, just add a period to the beginning of the class name, e.g.
+		.Object and .Array.<br />
+	<strong>unchecked</strong>: Classes with periods in their names will be exported.
+	Their names will be resolved as package paths.</dd>
+</dl>
+<dl>
+	<dt>Import Types Named with Package</dt>
+	<dd><strong>checked</strong>: [Default] If the text specifying a type for an
+		attribute or operator contains a package path or otherwise contains a
+		period (.), the type will resolve to its class name only and an import for
+		its class will be added to the top of the class file.<br />
+	<strong>unchecked</strong>: Types with periods will not be modified in the source
+	code. No imports will be included.</dd>
+</dl>
+<dl>
+	<dt>Auto-generate Constructors</dt>
+	<dd><strong>checked</strong>: [Default] Creates constructors automatically if a constructor is not
+	specified as an operation. If an operation has the same name as it's class name,
+	it is considered a constructor.<br />
+	<strong>unchecked</strong>: Will not create constructors automatically if not
+	defined operation. This usually isn't a problem unless a superclass requires
+	constructor arguments at which point a constructor is required to call super()
+	with those arguments.</dd>
+</dl>
+<dl>
+	<dt>Include Empty Supers</dt>
+	<dd><strong>checked</strong>: Includes calls to super() in constructors even when there are no parameters
+	for super. This can be considered superfluous given that it will be automatically
+	added if not present, but some prefer their use.<br />
+	<strong>unchecked</strong>: [Default] Calls to super() are not added to constructors if super
+	requires no parameters. If a call to super does require parameters (the super
+	class constructor requires parameters), that will be added.</dd>
+</dl>
+<dl>
+	<dt>Set Attributes in Constructors</dt>
+	<dd><strong>checked</strong>: [Default] Compares the attributes defined within
+		the class and the parameters passed into the constructor. If a constructor
+		parameter's name matches a class attribute, a definition is set within
+		the constructor to set the class attribute to the value of the parameter
+		argument. To prevent naming conflicts, <dfn>Set Attributes Prefix</dfn> and <dfn>Set
+		Attributes Suffix</dfn> is used.<br />
+	<strong>unchecked</strong>: Attributes are not set in constructors.</dd>
+</dl>
+<dl>
+	<dt>Set Attributes Prefix</dt>
+	<dd><strong>[Any String]</strong>: [Default = &quot;this.&quot;] Determines
+		a prefix for a class attribute that is being set to a constructor parameter
+		as a result of the <dfn>Set Attributes in Constructors</dfn> preference. This
+		will usually either be &quot;this.&quot; or match <dfn>Auto-generated Getter/Setter
+		Prefix</dfn>. This is necessary since  <dfn>Set Attributes in Constructors</dfn> relies
+		on parameters and attributes of the same name. Without some sort of distinction
+		between the two, a parameter might just end up setting itself to itself
+		rather than the class's member variable.</dd>
+</dl>
+<dl>
+	<dt>Set Attributes Suffix</dt>
+	<dd><strong>[Any String]</strong>: [Default = &quot;&quot;] Determines
+		a suffix for a class attribute that is being set to a constructor parameter
+		as a result of the <dfn>Set Attributes in Constructors</dfn> preference. This
+		will usually match <dfn>Auto-generated Getter/Setter
+	suffix</dfn>.</dd>
+</dl>
+<dl>
+	<dt>Auto-instantiate Compositions</dt>
+	<dd><strong>checked</strong>: [Default] Composition association members are
+		instantiated in the class. When defined, parameter names are used in
+		composition class instantiations match that class's constructor parameters.
+		It is likely you will need to modify these further given that instances
+		are created in the class body along with variable declarations.<br />
+<strong>unchecked</strong>: Composite association members are not automatically
+instantiated.</dd>
+</dl>
+<dl>
+	<dt>Auto-generate Methods from Interfaces</dt>
+	<dd><strong>checked</strong>: [Default] Automatically creates method declarations in classes if missing
+	in the operation list but required by an interface in which the class implements.<br />
+	<strong>unchecked</strong>: Will not automatically create methods for you requiring
+	that you implement them yourself in order to make the class compile. In some
+	cases using false may be necessary if you are inheriting from a class that is
+	not defined in the UML that provides the necessary implementation. The export
+	script will not be able to determine that your class will have access to that
+	implementation making methods that would need to be deleted.</dd>
+</dl>
+<dl>
+	<dt>Signals Extend Event</dt>
+	<dd><strong>checked</strong>: [Default] Any Signal class in UML that does not
+		directly extend (through a Generalization) another class will automatically
+		extend flash.events.Event.<br />
+	<strong>unchecked</strong>: Signals without superclasses will not extend anything.</dd>
+</dl>
+<dl>
+	<dt>Include Event clone</dt>
+	<dd><strong>checked</strong>: [Default] Automatically includes a clone method
+		in Event classes.<br />
+	<strong>unchecked</strong>: No clone method is included.</dd>
+</dl>
+<dl>
+	<dt>Include Event toString</dt>
+	<dd><strong>checked</strong>: [Default] Automatically includes a toString method
+		in Event classes.<br />
+	<strong>unchecked</strong>: No toString method is included.</dd>
+</dl>
+<dl>
+	<dt>Raisers Extend EventDispatcher</dt>
+	<dd><strong>checked</strong>: [Default] Any  class that has an operation that
+		raises a non-exception signal and does not directly extend (through a
+		Generalization) another class will automatically extend flash.events.EventDispatcher.<br />
+	<strong>unchecked</strong>: Classes without superclasses that raise signals
+	will not extend anything.</dd>
+</dl>
+<dl>
+	<dt>Raisers Include dispatchEvent</dt>
+	<dd><strong>checked</strong>: [Default] Adds a call to dispatchEvent in operations
+		that raise Signal (Event) objects.<br />
+	<strong>unchecked</strong>: No dispatchEvent call is included.</dd>
+</dl>
+<dl>
+	<dt>Include Event Metadata</dt>
+	<dd><strong>checked</strong>: [Default] Automatically includes an Event metadata
+		tag for the class for raised events. The event type specified is the name of
+		the Signal class with a lowercase first letter.<br />
+	<strong>unchecked</strong>: Event metadata is not included.</dd>
+</dl>
+<dl>
+	<dt>Event Metadata Style</dt>
+	<dd><strong>flash</strong>: [Default] If <dfn>Include Event Metadata</dfn> is
+		true, the  metadata added is in the form of <code>[Event(&quot;<ins>&lt;name&gt;</ins>&quot;)]</code>.<br />
+	<strong>flex</strong>: If <dfn>Include Event Metadata</dfn> is true, the metadata
+	added is in the form of <code>[Event(name=&quot;<ins>&lt;name&gt;</ins>&quot;, type=&quot;<ins>&lt;type&gt;</ins>&quot;)]</code>.</dd>
+</dl>
+<dl>
+	<dt>Exceptions Extend Error</dt>
+	<dd><strong>checked</strong>: [Default] Any Exception class in UML that does
+		not directly extend (through a Generalization) another class will automatically
+		extend Error.<br />
+		<strong>unchecked</strong>: Exceptions without superclasses will not extend
+		anything.</dd>
+</dl>
+<dl>
+	<dt>Raisers Include throw</dt>
+	<dd><strong>checked</strong>: [Default] Adds a throw statement in operations
+		that raise Exceptions (Error) objects.<br />
+		<strong>unchecked</strong>: No throw statement is included.</dd>
+</dl>
+<p>If at any time you want to change the defaults for these values, you can do
+	so from the StarUML Generator dialog by pressing the Template Properties
+	button.</p>
+<p><img src="images/edit_template_properties.jpg" width="501" height="360" /></p>
+<h3 id="exportresults">Export Results</h3>
+<p>When an export is completed, the results of that export are placed in a file
+	named <kbd>output.log</kbd> (the name of this file can be changed in the template
+	preferences). If the preference <dfn>Multiple
+	Source Files</dfn> is unchecked, it will also contain all the source code generated
+	from the UML.</p>
+<p>Results include what objects were traversed in the UML structure for source
+	code consideration and whether or not source code was produced. If produced,
+	any warnings or errors that occurred are also listed. It would be common
+	to see warnings, but errors should not occur and would usually imply a bug in
+	the export template. An example results log might include something like
+	the following:</p>
+<pre>com: No output.
+ 
+domain: No output. 
+ 
+Generating source code code for com.domain.Bars...
+Source code for com.domain.Bars successfully created!
+ 
+Generating source code code for com.domain.Car...
+WARNING: Unnamed association of type Engine found; creating default variable name.
+WARNING: Unimplemented interface method drive; auto-generating.
+WARNING: Return type not found for brake; assuming void.
+Source code for com.stuff.Car successfully created!</pre>
+<h3 id="warnings">Warnings</h3>
+<p>Many warnings can be prevented with the correct definitions in UML. Other
+	warnings, however, simply indicate that action must be taken to make the
+	generated code usable. These are specific to certain preferences. For example,
+	with <dfn>Auto-instantiate Compositions</dfn> checked, no assumptions are made
+	as to what values are being used for the constructor parameters of the new
+	instances. This creates a warning because the code may need to be edited
+	to include the appropriate values.</p>
+<p>The  list of possible warnings are as follows:</p>
+<dl>
+	<dt>Unnamed association of type [TYPE] found; (creating default variable name
+		| ignoring).</dt>
+	<dd>This means an association connected one class to another but no name was
+		provided for that association. If <dfn>Auto-name Unnamed Associations</dfn> is
+		checked, a default name will be created for you. If unchecked, the association
+		will be ignored.</dd>
+</dl>
+<dl>
+	<dt>Return type not found for [OPERATION]; assuming void.</dt>
+	<dd>If you do not define a return type in the parameters list of an operation,
+		this warning will be issued. Operations without return types will generate
+		methods whose return types are void.</dd>
+</dl>
+<dl>
+	<dt>Unimplemented interface method [OPERATION]; (auto-generating | you will
+	need to define this method yourself).</dt>
+	<dd>Indicates an interface was being implemented by a class which did not implement
+		all required methods defined within that interface. When <dfn>Auto-generate
+		Methods from Interfaces</dfn> is
+		checked, these methods will be automatically generated. Otherwise the
+	warning will indicate that you will need to do this yourself.</dd>
+</dl>
+<dl>
+	<dt>No constructor available for [CLASS] when a call to super with 
+	arguments is required.</dt>
+	<dd>This warning occurs if a class inherits from another class with required
+		constructor parameters and no constructor was available to call super
+		with  arguments for those parameters. This circumstance will only occur
+		when <dfn>Auto-generate Constructors</dfn> is unchecked.</dd>
+</dl>
+<h3 id="example">Example</h3>
+<p>Download this Gallery example to test the ActionScript 3.0 export from StarUML.</p>
+<ul class="file">
+	<li><a href="downloads/Gallery.uml">Download Gallery example</a></li>
+</ul>
+<p><img src="images/gallery_diagram.jpg" alt="" width="478" height="303" /></p>
+<p>When exported from StarUML with the default preferences, the following classes
+	are generated:</p>
+
+<pre><code>package com.example {
+
+	import flash.display.Sprite;
+	import flash.net.URLLoader;
+	import flash.events.Event;
+
+	/**
+	 * This is my Gallery class. It represents the document
+	 * class for my gallery SWF which will show pictures
+	 * from my vacation.  Click on various thumbnails to
+	 * see a bigger view of the image
+	 */
+	public class GalleryApplication extends Sprite {
+
+		private var loader:URLLoader;
+
+		public var imageList:XMLList;
+
+		public var thumbnails:ThumbnailList = new ThumbnailList();
+
+		public var viewer:ImageViewer = new ImageViewer();
+
+
+		public function GalleryApplication() {
+		}
+
+		private function xmlLoaded(event:Event):void {
+		}
+
+		private function thumbSelected(event:Event):void {
+		}
+
+	} // end class
+} // end package</code></pre>
+<pre><code>package com.example {
+
+	import flash.display.Loader;
+
+	public class ImageViewer extends Loader {
+
+		public function ImageViewer() {
+		}
+
+		public function set image(value:XML):void {
+		}
+
+	} // end class
+} // end package</code></pre>
+<pre><code>package com.example {
+
+	import flash.display.Sprite;
+	import flash.events.Event;
+
+	[Event("event")]
+
+	public class ThumbnailList extends Sprite {
+
+		public var selectedIndex:int;
+
+		public var thumbs:Array = [];
+
+
+		public function ThumbnailList() {
+		}
+
+		public function set images(imageList:XMLList):void {
+		}
+
+		private function thumbSelected(event:ImageViewer):void {
+			dispatchEvent(new Event(type));
+		}
+
+	} // end class
+} // end package</code></pre>
+
+<p>You'll notice that the flash.display.Sprite and flash.display.Loader
+	classes were not exported to ActionScript. Naturally you wouldn't expect
+	files generated for these classes since they are native Flash Player classes.
+	But how does the export know not to? It uses their names. Because the class
+	names are defined with their full package paths, those classes are omitted
+	from the export. This is governed through the <dfn>Ignore Definitions Named
+with Package</dfn> preference.</p>
+</body>
+</html>

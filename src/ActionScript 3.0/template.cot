@@ -1,0 +1,1840 @@
+
+_____________________________________________________________________
+
+ActionScript 3.0 Export Template for StarUML
+
+	Version: 1.0beta2
+	Date:    September 10, 2008
+	Author:  Trevor McCauley
+	Website: http://www.senocular.com
+	License: MIT; http://www.opensource.org/licenses/mit-license.php
+	StarUML: http://www.staruml.com
+_____________________________________________________________________
+
+Beginning export...
+
+
+<@SCRIPT
+
+// =========================================
+// Global custom variables (preferences)
+// =========================================
+
+// creates a separate file for each source file, otherwise all thrown into output.log
+var gMultipleSourceFiles			= Boolean(getArgument("Multiple Source Files") == "true");
+// when true, indents the class (or similar) block after the package {} block
+var gIndentAfterPackageBlock		= Boolean(getArgument("Indent After Package Block") == "true");
+// [tab, space] Determines with what source code is indented
+var gIndentStyle					= getArgument("Indent Style").toLowerCase();
+// Determines how many spaces are used with a gIndentStyle of space
+var gIndentSize						= parseInt(getArgument("Space Indent Size"));
+// lets you use ANSI indention where { is placed below the statement start on the next line
+var gUseANSIIndentation				= Boolean(getArgument("Use ANSI Indentation") == "true");
+// include comments at end of class and package blocks
+var gUseEndBlockComments			= Boolean(getArgument("Include Block End Comments") == "true");
+// creates constructors automatically if not specified as a member
+var gAutomaticConstructors			= Boolean(getArgument("Auto-generate Constructors") == "true");
+// automatically create and name properties for associations without names
+var gAutomaticUnnamedAssociations	= Boolean(getArgument("Auto-name Unnamed Associations") == "true");
+// convert public attributes to getter/setters
+var gPublicAttributesAsProperties	= Boolean(getArgument("Public Attributes as Getter/Setters") == "true");
+// prefix added to private variation of generated getter/setter
+var gPropertyPrivateVarPrefix		= getArgument("Auto-generated Getter/Setter Prefix");
+// suffix added to private variation of generated getter/setter
+var gPropertyPrivateVarSuffix		= getArgument("Auto-generated Getter/Setter Suffix");
+// automatically creates instances of associated classes if they're compositions
+var gDefineComposites				= Boolean(getArgument("Auto-instantiate Compositions") == "true");
+// automatically takes constructor parameters and sets them to related class properties
+var gSetPropertiesInConstructor		= Boolean(getArgument("Set Attributes in Constructors") == "true");
+// prefix for member properties when being set to argument variables
+var gSetPropertiesPrefix			= getArgument("Set Attributes Prefix");
+// suffix for member properties when being set to argument variables
+var gSetPropertiesSuffix			= getArgument("Set Attributes Suffix");
+// automatically create method declarations based on implemented interfaces
+var gAutomaticInterfaceMethods		= Boolean(getArgument("Auto-generate Methods from Interfaces") == "true");
+// include calls to super() even when there are no parameters for super
+var gIncludeEmptySupers				= Boolean(getArgument("Include Empty Supers") == "true");
+// will not produce .as files for definitions named with periods such as flash.display.Sprite
+var gIgnorePackageNamedClasses		= Boolean(getArgument("Ignore Definitions Named with Package") == "true");
+// takes types with periods and replaces them with just the class name and an import
+var gImportPackagedTypes			= Boolean(getArgument("Import Types Named with Package") == "true");
+// automatically extend Event for signals with no superclass
+var gSignalsExtendEvent				= Boolean(getArgument("Signals Extend Event") == "true");
+// automatically generates a clone() method for events
+var gIncludeEventClone				= Boolean(getArgument("Include Event clone") == "true");
+// automatically generates a toString() method for events
+var gIncludeEventToString			= Boolean(getArgument("Include Event toString") == "true");
+// automatically generates a dispatchEvent() for operations that raise a signal
+var gRaisersExtendEventDispatcher	= Boolean(getArgument("Raisers Extend EventDispatcher") == "true");
+// automatically generates a dispatchEvent() for operations that raise a signal
+var gIncludeDispatchEvent			= Boolean(getArgument("Raisers Include dispatchEvent") == "true");
+// automatically generates a clone() method for events
+var gIncludeEventMetadata			= Boolean(getArgument("Include Event Metadata") == "true");
+// [flash, flex] determines how metadata tags are defined from signals
+var gEventMetadataStyle				= getArgument("Event Metadata Style").toLowerCase();
+// automatically extend Error for exceptions with no superclass
+var gExceptionsExtendError			= Boolean(getArgument("Exceptions Extend Error") == "true");
+// automatically generates a throw for operations that raise an exception signal
+var gIncludeThrowError				= Boolean(getArgument("Raisers Include throw") == "true");
+
+// =========================================
+
+/*
+== Changes ==
+* 1.0beta
+	- initial release
+
+* 1.0beta2
+	- TargetScope will be used to determine static members if OwnerScope does not exist
+	- public attributes will no longer be converted to getter/setters by default.
+	- classes named with periods in their name are automatically parsed into a package path and name
+	- imports for attributes and operation parameters recognized 
+	- private variable for getter/setters now below getter/setters
+	- documentation is supported for more objects
+	- an output message is provided for recognized diagram elements that produce no output
+	- the intermediate JavaScript file is removed after the script completes
+	- if TypeExpression is invalid, types will fall back to Type_
+	- new options
+
+Future B Features:
+* Composites Defined in Constructor option
+* addEventListner
+	- in constructor? only for composed objects?  for all?  optional? add to what type?
+* Templates?
+	
+*/
+// ... Calculated global values ...
+var gIndent				= "\t";
+if (gIndentStyle != "tab"
+&& gIndentSize
+&& !isNaN(gIndentSize)
+&& gIndentSize > 0
+&& gIndentSize <= 100){ // we have limits...
+	gIndent				= "";
+	while (gIndentSize--) gIndent += " ";
+}
+var gIndentFirst		= gIndentAfterPackageBlock ? gIndent : "";
+var gResultsPrefix		= gMultipleSourceFiles ? "" : "// ";
+var definition			= null;
+var definitionSource	= "";
+// ... Constants ...
+var RESULT_LEVEL_MESSAGE	= 0;
+var RESULT_LEVEL_WARNING	= 1;
+var RESULT_LEVEL_ERROR		= 2;
+
+
+// =========================================
+// Class Definitions
+// =========================================
+
+
+/*********************************************************\
+ * Class Utils
+ * -------------------------------------------------------
+ * Misc utility functions for common yet semi- to fully
+ * complicated operations.
+ \********************************************************/
+Utils = {};
+Utils.lowerCaseFirst = function(str){
+	return str.charAt(0).toLowerCase() + str.substring(1);
+}
+
+/*********************************************************\
+ * Class DefinitionFactory
+ * -------------------------------------------------------
+ * Creates instances of Definition objects based on a
+ * supplied UMLClassifier instance.  If the instance is
+ * not a recognized or desired UMLClassifier, then null
+ * is returned.
+ \********************************************************/
+DefinitionFactory = {};
+DefinitionFactory.definitionMap = {};
+DefinitionFactory.create = function(source){
+	
+	// check for existing definition in the definition map
+	// if present, return that definition rather than
+	// making a new definition from scratch
+	if (DefinitionFactory.definitionMap[source.Pathname] != undefined){
+		return DefinitionFactory.definitionMap[source.Pathname];
+	}
+	
+	// attempt to create a new definition
+	// the following classes are used as definitions
+	var createdDefinition = null;
+	switch(source.GetClassName()){
+	
+		case "UMLClass":
+		case "UMLEnumeration":
+			createdDefinition = new ClassDefinition(source);
+			break;
+			
+		case "UMLInterface":
+			createdDefinition = new InterfaceDefinition(source);
+			break;
+			
+		case "UMLException":
+			createdDefinition = new ErrorDefinition(source);
+			break;
+			
+		case "UMLSignal":
+			createdDefinition = new EventDefinition(source);
+			break;
+			
+		// default to basic definition
+		// this should result in an invalid definition
+		// so it should not create a source file
+		default:
+			createdDefinition = new Definition(source);
+			break;
+	}
+	
+	// catalog definition for reference later if needed
+	DefinitionFactory.definitionMap[source.Pathname] = createdDefinition;
+		
+	// initialization occurs here, after the definition
+	// has been logged in the definition map
+	// this is necessary to prevent circular references
+	// in the resolveRelations step which can cause an
+	// infinite loop of definitions attempting to
+	// instantiate each other
+	createdDefinition.init();
+	
+	// return the definition
+	return createdDefinition;
+}
+
+// uses string name, not a target
+// these definitions are not exported but are
+// instead used to represent a type
+// as such, they are not part of the factory map
+DefinitionFactory.createSimple = function(fullyQualifiedName) {
+	if (!fullyQualifiedName || fullyQualifiedName == "*") return null;
+	
+	var createdDefinition = new Definition();
+	createdDefinition.parseClassName(fullyQualifiedName);
+	
+	return createdDefinition;
+}
+
+
+
+/*********************************************************\
+ * Class Definition
+ * -------------------------------------------------------
+ * Abstract base class for UMLClassifier definitions
+ \********************************************************/
+function Definition(target){
+	// define reference members to prevent prototyped
+	// values to be shared among instances
+	this.interfaces		= [];
+	this.dependencies	= {};
+	
+	// without target, setting up inheritence or in error
+	// either way, do not continue with initialization
+	if (!target) return; 
+	
+	this.target		= target;
+	this.parseClassName(this.target.Name);
+}
+
+Definition.prototype.target			= null;	// UML object the definition represents
+Definition.prototype.fileName		= "temp.txt"; // output file name
+Definition.prototype.packagePath	= ""; // package path
+Definition.prototype.packagedName	= false; // package path
+Definition.prototype.type			= "class"; // type of definition (class, interface, function, etc.)
+Definition.prototype.className		= "Object"; // name of definition (should be same as fileName - extension)
+Definition.prototype.superclass		= null; // reference to superclass definition
+Definition.prototype.superclassName	= ""; // class name of super class
+Definition.prototype.interfaces		= []; // list of interface definitions objects
+Definition.prototype.dependencies	= {}; // map of dependencies whose keys are fully qualified names and values their definition objects
+Definition.prototype.results		= ""; // results string for all operations since definition instantiation
+
+Definition.prototype.init = function(){
+	// inits dependent on being exported
+	if (this.isExported()) {
+		this.resolveDefinitionPath();
+		this.resolveRelations();
+		this.resolveSuperClass();
+	}
+}
+Definition.prototype.resolveRelations = function(){
+
+	// loop variables
+	var i, n, relationDefinition;
+
+	// loop through all generalizations (superclass(es))
+	var generalization;
+	n = this.target.GetGeneralizationCount();
+	for (i=0; i<n; i++){
+		generalization = this.target.GetGeneralizationAt(i);
+		
+		if (this.target == generalization.Child){
+			
+			relationDefinition = DefinitionFactory.create(generalization.Parent);
+			if (relationDefinition){
+				this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+			}
+		}
+	}
+	
+	// interfaces and other dependencies, but for now
+	// all we care about are the interfaces (UMLRealizations)
+	var dependency;
+	n = this.target.GetClientDependencyCount();
+	for (i=0; i<n; i++){
+		dependency = this.target.GetClientDependencyAt(i);
+		
+		// if this definition is the dependency supplier
+		// continue this loop skipping the dependency
+		if (dependency.Supplier == this.target){
+			continue;
+		}
+		
+		relationDefinition = DefinitionFactory.create(dependency.Supplier);
+		if (relationDefinition){
+			this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+		}
+		
+		// filter out dependencies for specific tasks
+		switch (dependency.GetClassName()){
+		
+			// interfaces
+			case "UMLRealization":
+				if (relationDefinition){
+					this.interfaces.push(relationDefinition);
+				}
+				break;
+		}
+	}
+	
+	// also consider other associations desirable
+	// for being marked as imports
+	var association;
+	n = this.target.GetAssociationCount();
+	for (i=0; i<n; i++){
+	
+		// the association on this type's end describes
+		// how the other type references this type
+		// conversely here, we want the other side of the
+		// association so we know how we refence the other type
+		association = this.target.GetAssociationAt(i).GetOtherSide();
+		
+		// make sure the target association end is navigable
+		// otherwise it should not be a dependency
+		if (association.IsNavigable){
+		
+			relationDefinition = DefinitionFactory.create(association.Participant);
+			if (relationDefinition){
+				this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+			}
+		}
+	}
+	
+	// if importing types defined in packages
+	// also go through attributes and operations
+	// extracting dependancies from their types
+	if (gImportPackagedTypes){
+	
+		// from attribute types
+		var attribute, def;
+		n = this.target.GetAttributeCount();
+		for (i=0; i<n; i++){
+			// the current method to write the source for
+			attribute	= this.target.GetAttributeAt(i);
+			
+			relationDefinition = null;
+			
+			// create a type definition from the attribute type
+			if (attribute.TypeExpression){
+			
+				// string representation of assumed type
+				relationDefinition = DefinitionFactory.createSimple(attribute.TypeExpression);
+				
+			}else if (attribute.Type_){
+			
+				// reference to existing UML type
+				relationDefinition = DefinitionFactory.create(attribute.Type_);
+			}
+			
+			// add dependency if type definition found
+			if (relationDefinition){
+				this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+			}
+		}
+	}
+	
+	// loop variables
+	var operation, parameter, signal;
+	
+	// from operation parameter types
+	var ii, nn;
+	n = this.target.GetOperationCount();
+	for (i=0; i<n; i++){
+		// the current method to write the source for
+		operation	= this.target.GetOperationAt(i);
+		
+		// if importing types defined in packages
+		// also go through attributes and operations
+		// extracting dependancies from their types
+		if (gImportPackagedTypes){
+		
+			// operation parameters
+			nn = operation.GetParameterCount();
+			for (ii=0; ii<nn; ii++){
+				// the current parameter in the operation
+				parameter = operation.GetParameterAt(ii);
+					
+				relationDefinition = null;
+				
+				// create a type definition from the parameter type
+				if (parameter.TypeExpression){
+				
+					// string representation of assumed type
+					relationDefinition = DefinitionFactory.createSimple(parameter.TypeExpression);
+					
+				}else if (parameter.Type_){
+				
+					// reference to existing UML type
+					relationDefinition = DefinitionFactory.create(parameter.Type_);
+				}
+				
+				// add dependency if type definition found
+				if (relationDefinition){
+					this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+				}
+			}
+		}
+		
+		// operation signals (events)
+		// these are always imported regarless
+		// of gImportPackagedTypes since they are
+		// actual class types defined in the UML
+		nn = operation.GetRaisedSignalCount();
+		for (ii=0; ii<nn; ii++){
+			// the current parameter in the operation
+			signal = operation.GetRaisedSignalAt(ii);
+				
+			// fromName will create a 'lite' definition
+			// consisting only of the class name (and package)
+			relationDefinition = DefinitionFactory.create(signal);
+			if (relationDefinition){
+				this.dependencies[relationDefinition.getFullyQualifiedName()] = relationDefinition;
+			}
+		}
+	}
+}
+Definition.prototype.resolveSuperClass = function(){
+
+	// loop variables
+	var generalization, relationDefinition;
+
+	// loop through all generalizations using
+	// the last found as the actual super class
+	var i, n = this.target.GetGeneralizationCount();
+	for (i=0; i<n; i++){
+		generalization = this.target.GetGeneralizationAt(i);
+		
+		if (this.target == generalization.Child){
+			
+			relationDefinition = DefinitionFactory.create(generalization.Parent);
+			if (relationDefinition){
+				this.superclass = relationDefinition;
+				this.dependencies[this.superclass.getFullyQualifiedName()] = this.superclass;
+			}
+		}
+	}
+}
+Definition.prototype.resolveDefinitionPath = function(){
+	
+	// its possible at this point that a package
+	// path exists if the name of the definition 
+	// included periods (parsing it into a path)
+	// if also nested into a package hierarchy
+	// append that hierarchy to the existing path
+	
+	var pathComplete = false;
+	var ns = this.target.Namespace;
+
+	while(ns){
+		switch(ns.GetClassName()){
+		
+			// do not consider projects or 
+			// models part of a package path
+			case "UMLProject":
+			case "UMLModel":
+				pathComplete = true;
+				break;
+				
+			// packages and subsystems are parth
+			// of the package path
+			case "UMLPackage":
+			case "UMLSubsystem":
+				if (this.packagePath == ""){
+					this.packagePath	= ns.Name;
+				}else{
+					this.packagePath	= ns.Name + "."  + this.packagePath;
+				}
+				break;
+		}
+		
+		ns = pathComplete ? null : ns.Namespace;
+	}
+}
+Definition.prototype.parseClassName = function(name){
+
+	// if a period is in the name, separate
+	// the name into a package path and a name
+	var pathIndex = name.lastIndexOf(".");
+	if (pathIndex != -1){
+	
+		// mark as having a packaged name
+		this.packagedName	= true;
+		
+		// separate full name into path and name
+		this.className		= name.substring(pathIndex + 1);
+		this.packagePath	= name.substring(0, pathIndex);
+		
+	}else{
+	
+		// no packaged name, just set name
+		this.className		= name;
+	}
+	
+	// base file name off of class name
+	this.fileName			= this.className + ".as";
+}
+Definition.prototype.getFullyQualifiedName = function(){
+	return this.packagePath ? this.packagePath + "." + this.className : this.className;
+}
+Definition.prototype.logResult = function(message, level){
+
+	// default level is for simple messages
+	// for warnings and errors, a level must
+	// be made explicit
+	if (level == undefined) level = RESULT_LEVEL_MESSAGE;
+	
+	var prefix = "";
+	
+	switch (level) {
+		case 0:
+			prefix = "";
+			break;
+			
+		case RESULT_LEVEL_WARNING:
+			prefix = "WARNING: ";
+			break;
+			
+		case RESULT_LEVEL_ERROR:
+			prefix = "ERROR: ";
+			break;
+	}
+	
+	if (this.results) this.results += "\n";
+	this.results += gResultsPrefix + prefix + message;
+}
+Definition.prototype.getResults = function(){
+	return this.results ? this.results + "\n\n" : this.className + ": No output.\n\n";
+}
+Definition.prototype.getSourceCode = function(){
+	var sourceCode =  "";
+	
+	// display message indicating the file being generated
+	var fullName = this.getFullyQualifiedName();
+	this.logResult("Generating source code for " + fullName + "...");
+	
+	// run through the operations necessary for
+	// creating the file's source code
+	var endClassStr		= gUseEndBlockComments ? " // end " + this.type + "\n" : "\n";
+	var endPacakgeStr	= gUseEndBlockComments ? " // end package" : "";
+	
+	try{
+		var ansindent = gUseANSIIndentation ? "\n" + gIndentFirst + gIndent : "";
+		sourceCode += ""
+			+ this.getPackageDeclaration()
+			+ this.getImports()
+			+ this.getMetdata()
+			+ this.getDocumentation(this.target, gIndentFirst)
+			+ this.getDefinitionDeclaration()
+			+ this.getPropertiesSource()
+			+ this.getAutomaticConstructorSource()
+			+ this.getMethodsSource()
+			+ gIndentFirst + "}" + endClassStr
+			+ "}" + endPacakgeStr;
+		
+		this.logResult("Source code for " + fullName + " successfully created!");
+	}catch(error){
+	
+		// if there was an application error, log
+		// the error message (techically, this should not happen)
+		this.logResult("Unexpected error generating source code: " + error.message);
+	}
+	
+	return sourceCode;
+}
+Definition.prototype.getDocumentation = function(source, indention){
+	if (indention == undefined) indention = "";
+	
+	var documentation = source.Documentation;
+	if (!documentation) return "";
+	
+	// set newline to \n if not already
+	documentation = documentation.replace(/\r\n/g, "\n");
+	documentation = documentation.replace(/\r/g, "\n");
+	
+	return indention + "/**\n"
+		+ indention + " * " + documentation.replace(/\n/g, "\n" + indention + " * ")
+		+ "\n" + indention + " */\n";
+}
+Definition.prototype.getPackageDeclaration = function(){
+	var ansindent		= gUseANSIIndentation ? "\n" : "";
+	var packageStr		= this.packagePath ? " " + this.packagePath : "";
+	return "package" + packageStr + " " + ansindent + "{\n\n"
+}
+Definition.prototype.getImports = function(){
+	var importStr = "";
+	
+	// loop variables
+	var importDefinition;
+	
+	var key;
+	for (key in this.dependencies){
+	
+		// get the import definition if available
+		// this will be used to determine if the definition
+		// is in the same pacakge where import is not needed
+		importDefinition = this.dependencies[key];
+		
+		// importDefinition can be an object or a string
+		// if an object, check its definition to see if it
+		// needs to be imported
+		if (!importDefinition.packagePath || importDefinition.packagePath == this.packagePath){
+			// no or same package; no need to import
+			continue;
+		}
+		
+		importStr += gIndentFirst + "import " + key + ";\n";
+	}
+	
+	// return imports string adding an extra new
+	// line if imports were found
+	return importStr ? importStr + "\n" : "";
+}
+Definition.prototype.getMetdata = function(){
+	return "";
+}
+Definition.prototype.getDefinitionDeclaration = function(){
+	var ansindent		= gUseANSIIndentation ? "\n" + gIndentFirst : "";
+	
+	var visible			= this.getVisibility(this.target);
+	var extendsStr		= this.superclass ? " extends " + this.superclass.getType() : "";
+	var implementsStr	= this.getInterfacesList();
+	
+	return gIndentFirst + visible + " " + this.type + " " + this.className + extendsStr + implementsStr + " " + ansindent + "{\n\n";
+}
+Definition.prototype.getInterfacesList = function(){
+	var interfacesStr = "";
+	
+	// loop variables
+	var interfaceDefinition;
+	
+	var i, n = this.interfaces.length;
+	for (i=0; i<n; i++){
+		interfaceDefinition = this.interfaces[i];
+		if (interfacesStr) interfacesStr += ", ";
+		interfacesStr += interfaceDefinition.className;
+	}
+	
+	return interfacesStr ? " implements " + interfacesStr : "";
+}
+Definition.prototype.getPropertiesSource = function(){
+	return "";
+}
+Definition.prototype.getPropertiesFromAssociationsSource = function(){
+	return "";
+}
+Definition.prototype.isAttributeCollection = function(association){
+	var multiplicity = association.Multiplicity;
+	
+	// no multiplicity, no collection
+	if (!multiplicity) return false;
+	
+	// get range values if exist
+	var ranges = multiplicity.split("..");
+	
+	// determing the count value to check > 1 for collection
+	// if there is a range, its the last of the ranges
+	// array (i.e. n2 in multiplicity of: n1..n2)
+	// otherwise its the multiplicity value itself
+	var count = (ranges.length > 1) ? ranges[1] : multiplicity;
+	
+	return Boolean(count == "*" || parseInt(count) > 1);
+}
+Definition.prototype.getPropertySource = function(source, visibility, scope, mutable, name, type, defaultValue){
+
+	// get docs
+	var docs = this.getDocumentation(source, gIndentFirst + gIndent);
+	
+	// create as getter setter if the following are true:
+	// 1) the preference has to be set to allow this
+	// 2) the visibility of the property must be public
+	// 3) the property cannot be a const; they are not mutable
+	if (gPublicAttributesAsProperties
+	&&  visibility == "public"
+	&&  mutable == "var"){
+		
+		var privateName	= gPropertyPrivateVarPrefix + name + gPropertyPrivateVarSuffix;
+		var propertyStr	= docs;
+		
+		// getter
+		// passing null as function type since we're providing our
+		// own custom return line in the lines parameter of
+		// the getFunctionBodySource call
+		propertyStr += gIndentFirst + gIndent + "public" + scope + " function get " + name + "():" + type + " "
+			+ this.getFunctionBodySource(null, name, null, ["return this." + privateName +";"]);
+			
+		// setter
+		propertyStr += gIndentFirst + gIndent + "public" + scope + " function set " + name + "(value:" + type + "):void "
+			+ this.getFunctionBodySource(null, name, "void", ["this." + privateName +" = value;"]);
+		
+		// private declaration
+		propertyStr += gIndentFirst + gIndent + "private" + scope + " var " + privateName + ":" + type + defaultValue + ";\n\n";
+		
+		return propertyStr;
+	}
+	
+	// default to member variable
+	return docs + gIndentFirst + gIndent + visibility + scope + " " + mutable + " " + name + ":" + type + defaultValue + ";\n\n";
+}
+Definition.prototype.getAutomaticConstructorSource = function(){
+	return "";
+}
+Definition.prototype.getAutomaticConstructorParameters = function(includeType){
+	return "";
+}
+Definition.prototype.getMethodsSource = function(){
+	return "";
+}
+Definition.prototype.getInterfaceMethodsSource = function(){
+	var methodStr		= "";
+	var ansindent		= gUseANSIIndentation ? "\n" + gIndentFirst + gIndent : "";
+
+	var methodsMap		= this.getAllMethodsMap();
+	var interfaceMap	= this.getAllInterfacesMap();
+	
+	// loop variables
+	var operation, docs, visibility, overriding;
+	var scope, parameters, type, body;
+	
+	// loop through interface map looking
+	// for what methods have not been implemented
+	// in the method map
+	var key;
+	for (key in interfaceMap){
+	
+		// if there is no method for this interface
+		// one needs to be added 
+		if (methodsMap[key] == undefined){
+		
+			// create new method from interface definition
+			operation = interfaceMap[key];
+		
+			// this if check for the interface methods could have been
+			// made earlier in the call stack, but it was made here so
+			// the work can be done to also provide the warning message
+			// even when the method is not being generated
+			if (gAutomaticInterfaceMethods){
+				
+				// added to warning to let the user know that
+				// the missing implementation is being
+				// generated automatically
+				this.logResult("Unimplemented interface method " + operation.Name + "; auto-generating.", RESULT_LEVEL_WARNING);
+				
+				// determins the different characteristics
+				// of the current method
+				docs			= this.getDocumentation(operation, gIndentFirst + gIndent);
+				visibility		= this.getVisibility(operation);
+				overriding		= this.getOverride(operation);
+				scope			= this.getScope(operation);
+				parameters		= this.getParameters(operation, true);
+				type			= (operation.Name != this.className) ? this.getReturnType(operation) : ""; // there is no type if a constructor
+				body			= this.getFunctionBodySource(operation, operation.Name, type);
+			
+				// add : to type string if exists
+				// this is done after function body call
+				if (type) type	= ":" + type;
+			
+				// write current variable to the return value
+				methodStr += gIndentFirst + gIndent + visibility + overriding + scope + " function " + operation.Name + "(" + parameters + ")" + type + body + "\n";
+				
+			}else{
+				this.logResult("Unimplemented interface method " + operation.Name + "; you will need to define this method yourself.", RESULT_LEVEL_WARNING);
+			}
+			
+		}
+	}
+	
+	return methodStr;
+}
+Definition.prototype.getAllMethodsMap = function(){
+	var map = {};
+
+	// loop variables
+	var i, n, method;
+	
+	// loop through class inheritence hierarchy
+	// make sure to consider simple definitions (without target)
+	var superRef = this;
+	while(superRef && superRef.target){
+	
+		// loop through class methods
+		n = superRef.target.GetOperationCount();
+		for (i=0; i<n; i++){
+			method = superRef.target.GetOperationAt(i);
+			
+			// if not mapped yet, map it
+			if (map[method.Name] == undefined){
+				map[method.Name] = method;
+			}
+		}
+		
+		// next item in inheritence hierarchy
+		superRef = superRef.superclass;
+	}
+	
+	return map;
+}
+Definition.prototype.getAllInterfacesMap = function(){
+	var map = {};
+
+	// loop variables
+	var interfaceRef, method, ii, nn;
+	
+	// loop through all interfaces
+	var i, n = this.interfaces.length;
+	for (i=0; i<n; i++){
+		interfaceRef = this.interfaces[i];
+	
+		// loop through interface inheritence hierarchy
+		while(interfaceRef){
+		
+			// loop through interface operations
+			nn = interfaceRef.target.GetOperationCount();
+			for (ii=0; ii<nn; ii++){
+				method = interfaceRef.target.GetOperationAt(ii);
+				
+				// if not mapped yet, map it
+				if (map[method.Name] == undefined){
+					map[method.Name] = method;
+				}
+			}
+			
+			// next item in inheritence hierarchy
+			interfaceRef = interfaceRef.superclass;
+		}
+	}
+	
+	return map;
+}
+Definition.prototype.getFunctionBodySource = function(name, returnType, lines){
+	return "{}\n";
+}
+Definition.prototype.getSuperCall = function(){
+
+	var parameters = "";
+	
+	// try to find parameters for a superclass 
+	// constructor call
+	if (this.superclass){
+		var superOperation = this.superclass.getMethodByName();
+		if (superOperation){
+			var parameters = this.superclass.getParameters(superOperation, false);
+		}
+	}
+	
+	// return a super call only if gIncludeEmptySupers
+	// preference allows or if parameters exist
+	return (gIncludeEmptySupers || parameters) ? gIndentFirst + gIndent + gIndent + "super(" + parameters + ");\n" : "";
+}
+Definition.prototype.getOverride = function(member){
+	// static operations do not require an override
+	if (this.isStatic(member)) return "";
+	
+	// walk through inheritence hierarchy looking
+	// for a member with the same name as the
+	// member provided
+	var superRef = this.superclass;
+	while(superRef){
+		if (superRef.getMemberByName(member.Name)){
+			return " override";
+		}
+		
+		// next item in inheritence hierarchy
+		superRef = superRef.superclass;
+	}
+	return "";
+}
+Definition.prototype.getMemberByName = function(name){
+	if (name == undefined) name = this.className;
+	
+	if (!this.target) return null;
+	
+	// loop variables
+	var member;
+	var i, n;
+	
+	// operations (methods)
+	member = this.getMethodByName(name);
+	if (member) return member;
+	
+	// attributes (member variables)
+	n = this.target.GetAttributeCount()
+	for (i=0; i<n; i++){
+		member = this.target.GetAttributeAt(i);
+		if (name == member.Name) return member;
+	}
+	
+	// associations (member variables)
+	n = this.target.GetAssociationCount()
+	for (i=0; i<n; i++){
+		member = this.target.GetAssociationAt(i).GetOtherSide();
+		if (name == member.Name) return member;
+	}
+	
+	return null;
+}
+Definition.prototype.getMethodByName = function(name){
+	if (name == undefined) name = this.className;
+	
+	if (!this.target) return null;
+	
+	var method;
+	var i, n = this.target.GetOperationCount();
+	for (i=0; i<n; i++){
+		method = this.target.GetOperationAt(i);
+		if (name == method.Name) return method;
+	}
+	
+	return null;
+}
+Definition.prototype.isStatic = function(source){
+	var isStaticScope = false;
+	try {
+		isStaticScope = Boolean(source.MOF_GetAttribute("OwnerScope") == "skClassifier");
+	}catch(error){
+	
+		// fall back to TargetScope if OwnerScope fails
+		// UMLAssociationEnds will do this
+		try{
+			isStaticScope = Boolean(source.MOF_GetAttribute("TargetScope") == "skClassifier");
+		}catch(error){
+			isStaticScope = false;
+		}
+	}
+	
+	return isStaticScope;
+}
+Definition.prototype.isComposite = function(end){
+	return Boolean(end.GetOtherSide().MOF_GetAttribute("Aggregation") == "akComposite");
+}
+Definition.prototype.isExported = function(){
+	// run through conditions that could
+	// make this an invalid definition
+	
+	// no target UML class, not valid
+	if (this.target == null) return false;
+	
+	// if this is an instance of the Definition
+	// class (abstract) and not a subclass, not valid
+	if (this.constructor == Definition) return false;
+	
+	// if this definition has a class name defined
+	// with periods and should be ignored, not valid
+	if (gIgnorePackageNamedClasses && this.packagedName) return false;
+	
+	// all passed, return true
+	return true;
+}
+Definition.prototype.getVisibility = function(source){
+	var visibilityStr = "";
+	
+	// MOF = Meta-Object Facility; This API returns
+	// enumeration values as their string property names
+	// rather than their (usually if not always) numeric
+	// value.  Their numeric values are not documented and
+	// the enumerations themselves seem, from what I can tell,
+	// inaccessible via JavaScript.
+	var visibility;
+	try {
+		visibility = source.MOF_GetAttribute("Visibility");
+	}catch(error){
+		visibility = null;
+	}
+	
+	switch(visibility){
+			
+		case "vkPackage":
+			visibilityStr	= "internal";
+			break;
+			
+		case "vkPrivate":
+			visibilityStr	= "private";
+			break;
+			
+		case "vkProtected":
+			visibilityStr	= "protected";
+			break;
+			
+		case "vkPublic":
+		default:
+			visibilityStr	= "public";
+			break;
+	}
+	
+	return visibilityStr;
+}
+Definition.prototype.getScope = function(source){
+	return this.isStatic(source) ? " static" : "";
+}
+Definition.prototype.getPropertyMutable = function(source){
+	var mutableStr = "";
+	
+	var mutable;
+	try {
+		mutable = source.MOF_GetAttribute("Changeability");
+	}catch(error){
+		mutable = null;
+	}
+	
+	switch(mutable){
+	
+		case "ckFrozen":
+			mutableStr	= "const";
+			break;
+			
+		case "ckChangeable":
+		case "ckAddOnly":
+		default:
+			mutableStr	= "var";
+			break;
+	}
+	
+	return mutableStr;
+}
+Definition.prototype.getType = function(source){
+	if (source == undefined) return this.className;
+	
+	var typeStr;
+	
+	if (source.TypeExpression){
+		// string-based type
+	
+		// the type from the source reference
+		typeStr = source.TypeExpression;
+	
+	}else if (source.Type_){
+		// referenced type in UML
+		
+		// use the name of the referenced
+		// class as the type; don't worry 
+		// about making a definition object
+		typeStr = source.Type_.Name;
+	}
+
+	// if importing the types, reduce fully
+	// qualified types to just the class name
+	// this only applies to "packaged types"
+	if (typeStr && gImportPackagedTypes){
+	
+		// use a temporary simple definition to parse
+		// the fully qualified class name
+		var typeDefinition = DefinitionFactory.createSimple(typeStr);
+		if (typeDefinition){
+			typeStr = typeDefinition.className;
+		}
+	}
+	
+	return typeStr ? typeStr : "*";
+}
+Definition.prototype.getASValueFromType = function(type){
+	// return types only for primitive types
+	// otherwise null is used as a null object value
+	switch(type){
+	
+		case "int":
+		case "uint":
+		case "Number":
+			return "0";
+			break;
+		
+		case "String":
+			return '""';
+			break;
+			
+		case "Boolean":
+			return "false";
+			break;
+	}
+	
+	return "null";
+}
+Definition.prototype.getInstance = function(){
+	var instanceStr	= "";
+
+	var constructor	= this.getMemberByName();
+	var parameters	= constructor ? this.getParameters(constructor, false) : this.getAutomaticConstructorParameters(false);
+	instanceStr += "new "+this.className+"(" + parameters + ")";
+	
+	return instanceStr;
+}
+function getOString(o){
+var s = "";
+for (var p in o) s += p + ",";
+return s;
+}
+Definition.prototype.getParameters = function(source, includeType){
+	if (!source) return this.getAutomaticConstructorParameters(includeType);
+	
+	var parameterStr = "";
+	
+	// loop variables
+	var parameter, isArgumentParameter, type, defaultValue;
+	
+	var i, n = source.GetParameterCount();
+	for (i=0; i<n; i++){
+		parameter = source.GetParameterAt(i);
+		
+		// we do not want parameters that are return values
+		isArgumentParameter = Boolean(parameter.MOF_GetAttribute("DirectionKind") != "pdkReturn");
+		if (isArgumentParameter){
+		
+			// define types if expected to
+			// an argument list would not want types
+			// additionally, an argument list would not
+			// want default values so they are also
+			// omitted if type is omitted
+			if (includeType){
+				type			= ":" + this.getType(parameter);
+				defaultValue	= parameter.InitialValue ? " = " + parameter.InitialValue : "";
+			}else{
+				type			= "";
+				defaultValue	= "";
+			}
+		
+			if (parameterStr) parameterStr += ", ";
+			parameterStr += parameter.Name + type + defaultValue;
+		}
+	}
+	
+	return parameterStr;
+}
+Definition.prototype.getReturnType = function(operation){
+	var returnStr = "";
+
+	// loop variables
+	var parameter, isReturnParameter;
+	
+	// going through all parameters using whatever last
+	// one was found with a type (if any)
+	var i, n = operation.GetParameterCount();
+	for (i=0; i<n; i++){
+		parameter = operation.GetParameterAt(i);
+		
+		isReturnParameter = Boolean(parameter.MOF_GetAttribute("DirectionKind") == "pdkReturn");
+		if (isReturnParameter && (parameter.TypeExpression || parameter.Type_)){
+			returnStr = this.getType(parameter);
+		}
+	}
+	
+	// return parameter not found; assuming void
+	if (!returnStr){
+		this.logResult("Return type not found for " + operation.Name + "; assuming void.", RESULT_LEVEL_WARNING);
+		returnStr = "void";
+	}
+	
+	return returnStr;
+}
+
+
+
+/*********************************************************\
+ * Class ClassDefinition
+ * -------------------------------------------------------
+ * Defines definitions for class files, namely those 
+ * defined in ActionScript using the class keyword. In 
+ * UML, this includes UMLClass, UMLEnumeration, and
+ * UMLException.
+ \********************************************************/
+function ClassDefinition(classElem){
+	this.type = "class";
+	Definition.call(this, classElem);
+}
+ClassDefinition.prototype = new Definition();
+ClassDefinition.prototype.constructor = ClassDefinition;
+
+ClassDefinition.prototype.resolveSuperClass = function(){
+	Definition.prototype.resolveSuperClass.call(this);
+	
+	// extra step for adding automatic superclasses
+	if (!this.superclass && gRaisersExtendEventDispatcher) {
+		
+		// see if dispatching events
+		var operation, raises = false;
+		
+		var i, n = this.target.GetOperationCount();
+		for (i=0; i<n; i++){
+			operation = this.target.GetOperationAt(i);
+			if (operation.GetRaisedSignalCount()){
+				
+				// raises events; extend EventDispatcher
+				this.superclass = DefinitionFactory.createSimple("flash.events.EventDispatcher");
+				this.dependencies[this.superclass.getFullyQualifiedName()] = this.superclass;
+				break;
+			}
+		}
+	}
+}
+ClassDefinition.prototype.getMetdata = function(){
+	if (!gIncludeEventMetadata) return "";
+	
+	var metaStr = "";
+	
+	// loop variables
+	var operation, signal, eventDefinition;
+	var ii, nn;
+	
+	// loop through all operations and 
+	// all signals raised by them
+	var i, n = this.target.GetOperationCount();
+	for (i=0; i<n; i++){
+		operation = this.target.GetOperationAt(i);
+		
+		nn = operation.GetRaisedSignalCount();
+		for (ii=0; ii<nn; ii++){
+			signal = operation.GetRaisedSignalAt(ii);
+			
+			// Exceptions are signals too, only
+			// accept signals directly of type UMLSignal
+			if (signal.GetClassName() != "UMLSignal") continue;
+			
+			eventDefinition = DefinitionFactory.create(signal);
+			
+			// write out an Event metadata 
+			// tag based on style
+			if (eventDefinition){
+				switch (gEventMetadataStyle){
+					case "flex":
+						metaStr += gIndentFirst + "[Event(name=\"" + Utils.lowerCaseFirst(eventDefinition.className) + "\", "
+							+ "type=\"" + eventDefinition.getFullyQualifiedName() + "\")]\n";
+						break;
+						
+					case "flash":
+					default:
+						metaStr += gIndentFirst + "[Event(\"" + Utils.lowerCaseFirst(eventDefinition.className) + "\")]\n";
+						break;
+				}
+			}
+		}
+	}
+	
+	return metaStr ? metaStr + "\n" : "";
+}
+ClassDefinition.prototype.getPropertiesSource = function(){
+	var propertyStr = "";
+	
+	// loop variables
+	var attribute, visibility, scope;
+	var mutable, type, defaultValue;
+	
+	// get properties defined within attribute collection
+	var i, n = this.target.GetAttributeCount();
+	for (i=0; i<n; i++){
+		// the current property to write the source for
+		attribute		= this.target.GetAttributeAt(i);
+		
+		// determins the different characteristics
+		// of the current property
+		visibility		= this.getVisibility(attribute);
+		scope			= this.getScope(attribute);
+		mutable 		= this.getPropertyMutable(attribute);
+		type			= this.getType(attribute);
+		defaultValue	= attribute.InitialValue ? " = " + attribute.InitialValue : "";
+		
+		// if the attribute has multiplicity that
+		// defines it as a collection, define the
+		// variable type as an array
+		if (this.isAttributeCollection(attribute)){
+			// array of properties
+			type			= "Array";
+			defaultValue	= " = []";
+		}
+			
+		// write current variable to the return value
+		propertyStr += this.getPropertySource(attribute, visibility, scope, mutable, attribute.Name, type, defaultValue);
+	}
+	
+	// include properties defined from 
+	// association relationships
+	propertyStr += this.getPropertiesFromAssociationsSource();
+	
+	// return the source string for
+	// each property found
+	return propertyStr ? propertyStr + "\n" : "";
+}
+ClassDefinition.prototype.getPropertiesFromAssociationsSource = function(){
+	var propertyStr = "";
+	
+	// loop variables
+	var association, name, visibility, scope, mutable;
+	var defaultValue, typeDefinition, dataType, type;
+	
+	var i, n = this.target.GetAssociationCount();
+	for (i=0; i<n; i++){
+	
+		// the association on this type's end describes
+		// how the other type references this type
+		// conversely here, we want the other side of the
+		// association so we know how we refence the other type
+		association = this.target.GetAssociationAt(i).GetOtherSide();
+		
+		name = association.Name;
+		
+		// only create if association is named
+		// or specified as navigable
+		if (name || association.IsNavigable){
+			
+			visibility		= this.getVisibility(association);
+			mutable 		= this.getPropertyMutable(association);
+			scope			= ""; // scope cannot be determined for associations
+			
+			typeDefinition	= DefinitionFactory.create(association.Participant);
+			dataType		= typeDefinition ? typeDefinition.getType() : "*";
+			
+			// if the association has multiplicity that
+			// defines it as a collection, define the
+			// variable type as an array
+			if (this.isAttributeCollection(association)){
+				// array of properties
+				type			= "Array";
+				defaultValue	= " = []";
+			}else{
+				// single value
+				type			= dataType;
+				defaultValue	= (gDefineComposites && this.isComposite(association))
+					? " = " + typeDefinition.getInstance()
+					: "";
+			}
+			
+			// if a name is not specified, one has to be created
+			// with what information is available
+			// the dataType will be used as it is not uncommon
+			// among member variables
+			if (!name){
+				
+				if (gAutomaticUnnamedAssociations){
+					
+					// note that an unnamed association was found including
+					// message indicating whether it was generated or ignored
+					this.logResult("Unnamed association of type " + dataType + " found; creating default variable name.", RESULT_LEVEL_WARNING);
+				
+					// naming scheme uses a lower-case
+					// version of the data type
+					// if a collection, an 's' is added
+					// to the end of the variable name
+					name = (dataType != "*") ? Utils.lowerCaseFirst(dataType) : "unknown";
+					if (type == "Array") {
+						name += "s";
+					}
+					
+				}else{
+					this.logResult("Unnamed association of type " + dataType + " found; ignoring.", RESULT_LEVEL_WARNING);
+				}
+			}
+			
+			// only add the property if a name has been
+			// properly resolved
+			if (name){
+				propertyStr += this.getPropertySource(association, visibility, scope, mutable, name, type, defaultValue);
+			}
+		}
+	}
+	
+	return propertyStr;
+}
+ClassDefinition.prototype.getAutomaticConstructorSource = function(){
+	var visible, body, parameters;
+
+	// global preference can block auto-constructors
+	if (!gAutomaticConstructors){
+		
+		// if we're not generating automatic constructors
+		// we should see if the super class requires parameters
+		// so we can issue a warning about the lack of 
+		// having one
+		if (this.superclass){
+			parameters = this.superclass.getAutomaticConstructorParameters(false);
+			if (parameters){
+				this.logResult("No constructor available for " + this.classname + " when a call to super with arguments is required.", RESULT_LEVEL_WARNING);
+			}
+		}
+		
+		// no constructor, no string
+		return "";
+	}
+	
+	// check methods for existing constructor definition
+	// if exist, leave it to method definition
+	if (this.getMethodByName()){
+		return "";
+	}
+	
+	// create automatic constructor
+	visible		= this.getVisibility(this.target);
+	body		= this.getFunctionBodySource(null, this.className);
+	parameters	= this.getAutomaticConstructorParameters(true);
+	
+	return gIndentFirst + gIndent + visible + " function " + this.className + "(" + parameters + ")" + body + "\n";
+}
+ClassDefinition.prototype.getMethodsSource = function(){
+	var methodStr = "";
+	
+	// loop variables
+	var operation, docs, visibility, overriding;
+	var scope, parameters, type, body;
+	
+	var i, n = this.target.GetOperationCount();
+	for (i=0; i<n; i++){
+		// the current method to write the source for
+		operation		= this.target.GetOperationAt(i);
+		
+		// determins the different characteristics
+		// of the current method
+		docs			= this.getDocumentation(operation, gIndentFirst + gIndent);
+		visibility		= this.getVisibility(operation);
+		overriding		= this.getOverride(operation);
+		scope			= this.getScope(operation);
+		parameters		= this.getParameters(operation, true);
+		type			= (operation.Name != this.className) ? this.getReturnType(operation) : ""; // there is no type if a constructor
+		body			= this.getFunctionBodySource(operation, operation.Name, type);
+		
+		// add : to type string if exists
+		// this is done after function body call
+		if (type) type	= ":" + type;
+				
+		// write current variable to the return value
+		methodStr += docs + gIndentFirst + gIndent + visibility + overriding + scope + " function " + operation.Name + "(" + parameters + ")" + type + body + "\n";
+	}
+	
+	methodStr += this.getInterfaceMethodsSource();
+	
+	// return the source string for
+	// each method function found
+	return methodStr;
+}
+ClassDefinition.prototype.getFunctionBodySource = function(operation, name, returnType, lines){
+	var ansindent		= gUseANSIIndentation ? "\n" + gIndentFirst + gIndent : "";
+	
+	var bodyStr			= "";
+	var isConstructor	= Boolean(name == this.className);
+	
+	var superStr		= isConstructor ? this.getSuperCall() : "";
+	var setStr			= isConstructor ? this.getPropertySetSource(operation) : "";
+	var eventStr		= this.getSignalsSource(operation); 
+	var linesStr		= (lines && lines.length) ? gIndentFirst + gIndent + gIndent + lines.join("\n" + gIndentFirst + gIndent + gIndent) + "\n" : "";
+	var returnStr		= (returnType && returnType != "void") ? gIndentFirst + gIndent + gIndent + "return " + this.getASValueFromType(returnType) + ";\n" : "";
+
+	bodyStr += " " + ansindent + "{\n"
+		+ superStr
+		+ setStr
+		+ eventStr
+		+ linesStr
+		+ returnStr
+		+ gIndentFirst + gIndent + "}\n";
+		
+	return bodyStr;
+}
+ClassDefinition.prototype.getSignalsSource = function(operation){
+	if (!operation) return "";
+	if (!gIncludeDispatchEvent && !gIncludeThrowError) return "";
+	
+	var signalStr = "";
+	
+	// loop variables
+	var signal, signalType, signalDefinition, operation, parameters;
+	
+	var i, n = operation.GetRaisedSignalCount();
+	for (i=0; i<n; i++){
+		signal = operation.GetRaisedSignalAt(i);
+		
+		signalDefinition	 = DefinitionFactory.create(signal);
+		if (signalDefinition){
+			
+			switch(signal.GetClassName()){
+			
+				case "UMLSignal":
+					if (gIncludeDispatchEvent){
+						signalStr += gIndentFirst + gIndent + gIndent + "dispatchEvent("
+							+ signalDefinition.getInstance() + ");\n";
+					}
+					break;
+					
+				case "UMLException":
+					if (gIncludeThrowError){
+						signalStr += gIndentFirst + gIndent + gIndent + "throw "
+							+ signalDefinition.getInstance() + ";\n";
+					}
+					break;
+			}
+		}
+	}
+	
+	return signalStr;
+}
+ClassDefinition.prototype.getPropertySetSource = function(operation){
+	if (!operation || !gSetPropertiesInConstructor) return "";
+	
+	var setStr = "";
+	
+	// compare operation parameters with class
+	// properties and create sets where needed
+	var parametersMap	= this.getParametersMap(operation);
+	var attributesMap	= this.getAttributesMap();
+	
+	// loop variables
+	var parameter, attribute;
+	
+	// loop through interface map looking
+	// for what methods have not been implemented
+	// in the method map
+	var key;
+	for (key in parametersMap){
+	
+		// if an attribute exists within the same
+		// map as the parameters (by name), set value
+		if (attributesMap[key] != undefined){
+		
+			parameter	= parametersMap[key];
+			attribute	= attributesMap[key];
+			
+			setStr += gIndentFirst + gIndent + gIndent + gSetPropertiesPrefix + attribute.Name + gSetPropertiesSuffix + " = " + parameter.Name + ";\n";
+		}
+	}
+	
+	return setStr;
+}
+
+ClassDefinition.prototype.getAttributesMap = function(){
+	var map = {};
+
+	// loop variables
+	var attribute;
+	
+	// loop through class methods
+	var i, n = this.target.GetAttributeCount();
+	for (i=0; i<n; i++){
+		attribute = this.target.GetAttributeAt(i);
+		
+		// if not mapped yet, map it
+		if (map[attribute.Name] == undefined){
+			map[attribute.Name] = attribute;
+		}
+	}
+	
+	return map;
+}
+ClassDefinition.prototype.getParametersMap = function(operation){
+	var map = {};
+	
+	// loop variables
+	var parameter;
+	
+	// loop through class methods
+	var i, n = operation.GetParameterCount();
+	for (i=0; i<n; i++){
+		parameter = operation.GetParameterAt(i);
+		
+		// if not mapped yet, map it
+		// but do not include parameters already
+		// taken care of by the super
+		if (map[parameter.Name] == undefined){
+			map[parameter.Name] = parameter;
+		}
+	}
+	
+	return map;
+}
+
+
+/*********************************************************\
+ * Class EventDefinition
+ * -------------------------------------------------------
+ * Defines definitions for event classes.  These are mostly
+ * ClassDefinition instances with a few more options for
+ * code generation.
+ \********************************************************/
+
+function EventDefinition(signalElem){
+	ClassDefinition.call(this, signalElem);
+}
+EventDefinition.prototype = new ClassDefinition();
+EventDefinition.prototype.constructor = EventDefinition;
+
+EventDefinition.prototype.resolveSuperClass = function(){
+	ClassDefinition.prototype.resolveSuperClass.call(this);
+	
+	// if no super class exists, and signals should
+	// extend events, set Event as the superclass
+	if (!this.superclass && gSignalsExtendEvent){
+		this.superclass = DefinitionFactory.createSimple("flash.events.Event");
+		this.dependencies[this.superclass.getFullyQualifiedName()] = this.superclass;
+	}
+}
+EventDefinition.prototype.getSuperCall = function(){
+	// extending Event; use standard event super()
+	if (this.superclass && this.superclass.getFullyQualifiedName() == "flash.events.Event"){
+		return gIndentFirst + gIndent + gIndent + "super(type, bubbles, cancelable);\n";
+	}
+	
+	// fall back to standard super call
+	return ClassDefinition.prototype.getSuperCall.call(this);
+}
+EventDefinition.prototype.getAutomaticConstructorParameters = function(includeType){
+	if (this.superclass && this.superclass.getFullyQualifiedName() == "flash.events.Event"){
+		return includeType
+			? "type:String, bubbles:Boolean = false, cancelable:Boolean = false"
+			: "type, bubbles, cancelable";
+	}
+	
+	return "";
+}
+EventDefinition.prototype.getMethodsSource = function(){
+	var ansindent = gUseANSIIndentation ? "\n" + gIndentFirst + gIndent : "";
+	
+	var methodStr = ClassDefinition.prototype.getMethodsSource.call(this);
+	
+	// common variables
+	var constructorOp, parameters;
+	
+	// add preference-specific additions
+	// automatic clone() method
+	if (gIncludeEventClone && !this.getMethodByName("clone")){
+	
+		constructorOp	= this.getMemberByName();
+		parameters		= this.getParameters(constructorOp, false);
+		
+		methodStr += gIndentFirst + gIndent + "public override function clone():Event " + ansindent + "{\n"
+			+ gIndentFirst + gIndent + gIndent + "return new " + this.className + "(" + parameters + ");\n"
+			+ gIndentFirst + gIndent + "}\n\n";
+	}
+	
+	// automatic toString() method
+	if (gIncludeEventToString && !this.getMethodByName("toString")){
+	
+		parameters = this.getAttributeStringList();
+		if (parameters) parameters = ", " + parameters;
+		
+		methodStr += gIndentFirst + gIndent + "public override function toString():String " + ansindent + "{\n"
+			+ gIndentFirst + gIndent + gIndent + "return formatToString(\"" + this.className + "\", "
+			+ "\"type\", \"bubbles\", \"cancelable\", \"eventPhase\""
+			+ parameters + ");\n"
+			+ gIndentFirst + gIndent + "}\n\n";
+	}
+	
+	return methodStr;
+}
+EventDefinition.prototype.getAttributeStringList = function(){
+
+	var attStr = "";
+
+	// loop variables
+	var attribute;
+	
+	// loop through attributes getting
+	// a list as a set of parameters
+	var i, n = this.target.GetAttributeCount();
+	for (i=0; i<n; i++){
+		// the current method to write the source for
+		attribute	= this.target.GetAttributeAt(i);
+		
+		if (attStr) attStr += ", ";
+		attStr += '"' + attribute.Name + '"';
+	}
+	
+	return attStr;
+}
+
+
+
+/*********************************************************\
+ * Class ErrorDefinition
+ * -------------------------------------------------------
+ * Defines definitions for error classes.  These are mostly
+ * ClassDefinition instances with a few more options for
+ * code generation.
+ \********************************************************/
+
+function ErrorDefinition(signalElem){
+	ClassDefinition.call(this, signalElem);
+}
+ErrorDefinition.prototype = new ClassDefinition();
+ErrorDefinition.prototype.constructor = ErrorDefinition;
+
+ErrorDefinition.prototype.resolveSuperClass = function(){
+	ClassDefinition.prototype.resolveSuperClass.call(this);
+	
+	// if no super class exists, and exceptions should
+	// extend Error, set Error as the superclass
+	if (!this.superclass && gExceptionsExtendError){
+		this.superclass = DefinitionFactory.createSimple("Error");
+		this.dependencies[this.superclass.getFullyQualifiedName()] = this.superclass;
+	}
+}
+ErrorDefinition.prototype.getSuperCall = function(){
+	// extending Error; use standard error super()
+	if (this.superclass && this.superclass.getFullyQualifiedName() == "Error"){
+		return gIndentFirst + gIndent + gIndent + "super(message, id);\n";
+	}
+	
+	// fall back to standard super call
+	return ClassDefinition.prototype.getSuperCall.call(this);
+}
+ErrorDefinition.prototype.getAutomaticConstructorParameters = function(includeType){	
+	if (this.superclass && this.superclass.getFullyQualifiedName() == "Error"){
+		return includeType
+			? "message:String = \"\", id:int = 0"
+			: "message, id";
+	}
+	
+	return "";
+}
+
+
+/*********************************************************\
+ * Class InterfaceDefinition
+ * -------------------------------------------------------
+ * Defines definitions for interface files, namely those 
+ * defined in ActionScript using the interface keyword. In 
+ * UML, this includes UMLInterface.
+ \********************************************************/
+function InterfaceDefinition(interfaceElem){
+	this.type = "interface";
+	Definition.call(this, interfaceElem);
+}
+InterfaceDefinition.prototype = new Definition();
+InterfaceDefinition.prototype.constructor = InterfaceDefinition;
+
+InterfaceDefinition.prototype.getMethodsSource = function(){
+	// much like the ClassDefinition.getMethodSource
+	// but with some reduced properties
+	var methodStr = "";
+	
+	// loop variables
+	var operation, visibility, overriding, scope;
+	var parameters, type, body;
+	
+	var i, n = this.target.GetOperationCount();
+	for (i=0; i<n; i++){
+		// the current method to write the source for
+		operation		= this.target.GetOperationAt(i);
+		
+		// determins the different characteristics
+		// of the current method
+		visibility		= this.getVisibility(operation);
+		scope			= this.getScope(operation);
+		parameters		= this.getParameters(operation, true);
+		type			= (operation.Name != this.className) ? ":" + this.getReturnType(operation) : ""; // there is no type if a constructor
+		body			= ";\n";
+		
+		// normally scope is " static" but to work
+		// within the "un-visible" format, the space
+		// is moved to the end
+		if (scope == " static"){
+			scope		= "static ";
+		}
+		
+		// write current variable to the return value
+		methodStr += gIndentFirst + gIndent + scope + "function " + operation.Name + "(" + parameters + ")" + type + body;
+	}
+	
+	// return the source string for
+	// each method function found
+	return methodStr ? methodStr + "\n" : "";
+}
+
+
+
+/*********************************************************\
+ * Function setupFileBegin
+ * -------------------------------------------------------
+ * Makes a call to the global fileBegin function
+ * making sure that the directory path for the
+ * definition is valid.
+ \********************************************************/
+function setupFileBegin(){
+
+	// determine parts of definition path
+	// from definition's pacakge location
+	var pathParts = definition.packagePath.split(".");
+	var filePath = getTarget();
+	
+	// loop through the definition path
+	// of the current definition creating
+	// the folder structure
+	var i, n = pathParts.length;
+	for (i=0; i<n; i++){
+		filePath += "\\" + pathParts[i];
+		
+		// create folder on file system
+		if (!folderExists(filePath)){
+			createFolder(filePath);
+		}
+	}
+	
+	// set file path for writing to the
+	// currently defined path
+	fileBegin(filePath + "\\" + definition.fileName);
+}
+@>
+<@REPEAT {R}::;UMLClassifier;;@>
+<@SCRIPT
+	// looping through all classifiers some
+	// will be valid, many may not allow
+	// DefinitionFactory to determine
+	// returning null if not
+	// if non-null, a Definition object will be
+	// created that will determine the
+	// classifier's file path ans source code
+	definition = DefinitionFactory.create(current());
+	definitionSource = definition.isExported() ? definition.getSourceCode() : "";
+	
+	
+	// once the source code has been generated, write
+	// the results (warnings, errors, etc.) to the
+	// common output file.
+	print(definition.getResults());
+	
+	// if a valid definitionSource was created and user
+	// desires source files to be saved in separate
+	// .as files, begin a new file for writing
+	// definitionSource now, otherwise source will
+	// all be written to a common output file 
+	if (definitionSource){
+		if (gMultipleSourceFiles) setupFileBegin();
+		print(definitionSource);
+		if (gMultipleSourceFiles) fileEnd();
+	}
+@>
+<@ENDREPEAT@>
+<@SCRIPT
+	// cleanup
+	// I don't like that the intermediate file is left behind
+	// lets delete that from the file system so no one has
+	// to worry about it (the general output file can remain)
+	try{
+		deleteFile(getArgument("intermediate"));
+	}catch(error){
+		// whaaa? can't delete intermediate?
+		// oh well, fail silently
+	}
+@>
+
+Export complete!
